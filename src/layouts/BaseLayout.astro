@@ -88,4 +88,24 @@ const {
             transform: translateY(-8px);
         }
     }
+
+    /* ── Mobile GPU perf: reduce heavy backdrop-filter to prevent scroll flicker ── */
+    @media (max-width: 768px) {
+        .hero-copy,
+        .hero-card,
+        .panel,
+        .side-panel,
+        .hero,
+        .about-description-bg,
+        .mini-stat-card,
+        .project-card,
+        .timeline-card,
+        .photo-card,
+        .blog-card {
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            will-change: transform;
+            transform: translateZ(0);
+        }
+    }
 </style>

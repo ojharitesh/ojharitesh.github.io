@@ -47,10 +47,14 @@ const navItems = [
         background: rgba(8, 10, 14, 0.72);
         box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
         backdrop-filter: blur(14px);
-        transform: translateX(-50%);
+        -webkit-backdrop-filter: blur(14px);
+        transform: translateX(-50%) translateZ(0);
         max-width: calc(100vw - 1.5rem);
         overflow-x: auto;
         scrollbar-width: none;
+        will-change: transform;
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
     }
 
     .site-nav::-webkit-scrollbar {
