@@ -4,8 +4,6 @@
     z-index: 0;
     pointer-events: none;
     overflow: hidden;
-    will-change: transform;
+    background-color: #0b1118; /* FALLBACK: matches site gradient to prevent black flicker */
     transform: translateZ(0);
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
 }

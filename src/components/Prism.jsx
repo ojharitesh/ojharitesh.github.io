@@ -222,7 +222,7 @@ const Prism = ({
                     value: 1 / ((gl.drawingBufferHeight || 1) * 0.1 * SCALE)
                 },
                 uTimeScale: { value: TS },
-                uMaxSteps: { value: isMobileDevice ? 25 : 60 }
+                uMaxSteps: { value: isMobileDevice ? 15 : 60 }
             }
         });
         const mesh = new Mesh(gl, { geometry, program });
@@ -335,17 +335,19 @@ const Prism = ({
             program.uniforms.uUseBaseWobble.value = 1;
         }
 
+        let isInteracting = false;
+        const handleInteractionStart = () => { isInteracting = true; };
+        const handleInteractionEnd = () => { isInteracting = false; };
+        window.addEventListener('lanyard-interaction-start', handleInteractionStart);
+        window.addEventListener('lanyard-interaction-end', handleInteractionEnd);
+        window.addEventListener('lanyard-pointer-missed', handleInteractionEnd);
+
         let lastRenderTime = 0;
         const render = t => {
-            const time = (t - t0) * 0.001;
-            
-            // PERFORMANCE: Cap background at ~30 FPS (33ms per frame)
-            if (t - lastRenderTime < 33) {
-                raf = requestAnimationFrame(render);
-                return;
-            }
-            lastRenderTime = t;
+            raf = requestAnimationFrame(render);
+            if (isInteracting) return;
 
+            const time = (t - t0) * 0.001;
             program.uniforms.iTime.value = time;
 
             let continueRAF = true;
@@ -390,9 +392,8 @@ const Prism = ({
             }
 
             renderer.render({ scene: mesh });
-            if (continueRAF) {
-                raf = requestAnimationFrame(render);
-            } else {
+            if (!continueRAF) {
+                cancelAnimationFrame(raf);
                 raf = 0;
             }
         };
@@ -413,6 +414,9 @@ const Prism = ({
         return () => {
             stopRAF();
             ro.disconnect();
+            window.removeEventListener('lanyard-interaction-start', handleInteractionStart);
+            window.removeEventListener('lanyard-interaction-end', handleInteractionEnd);
+            window.removeEventListener('lanyard-pointer-missed', handleInteractionEnd);
             if (animationType === 'hover') {
                 if (onPointerMove) window.removeEventListener('pointermove', onPointerMove);
                 window.removeEventListener('mouseleave', onLeave);

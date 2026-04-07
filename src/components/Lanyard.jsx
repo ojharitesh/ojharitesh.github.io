@@ -32,37 +32,24 @@ export default function Lanyard({
         typeof window !== 'undefined' ? window.innerWidth < 768 : false
     );
 
-    const [isVisible, setIsVisible] = useState(true);
-    const containerRef = useRef(null);
-
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 768);
         window.addEventListener('resize', handleResize);
-        
-        // PERFORMANCE: Pause rendering when lanyard is off-screen
-        const observer = new IntersectionObserver(
-            ([entry]) => setIsVisible(entry.isIntersecting),
-            { threshold: 0 }
-        );
-        if (containerRef.current) observer.observe(containerRef.current);
-
-        return () => {
-            window.removeEventListener('resize', handleResize);
-            observer.disconnect();
-        };
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     return (
-        <div className="lanyard-wrapper" ref={containerRef}>
+        <div className="lanyard-wrapper">
             <Canvas
                 camera={{ position, fov }}
-                // PERFORMANCE: Locked DPR to 1.0
+                // PERFORMANCE: Locked DPR to 1.0 for efficiency
                 dpr={1.0}
-                // PERFORMANCE: Pause loop when not visible
-                frameloop={isVisible ? 'always' : 'never'}
                 gl={{ alpha: transparent }}
                 onCreated={({ gl }) => gl.setClearColor(new THREE.Color(0x000000), transparent ? 0 : 1)}
-                onPointerMissed={() => window.dispatchEvent(new Event('lanyard-pointer-missed'))}
+                onPointerMissed={() => {
+                    window.dispatchEvent(new Event('lanyard-pointer-missed'));
+                    window.dispatchEvent(new Event('lanyard-interaction-end'));
+                }}
             >
                 <ambientLight intensity={Math.PI} />
                 <Physics gravity={gravity} timeStep={isMobile ? 1 / 30 : 1 / 60}>
@@ -159,7 +146,6 @@ function Band({ maxSpeed = 50, minSpeed = 0, isMobile = false }) {
                 document.body.style.cursor = 'auto';
             };
         }
-
         document.body.style.cursor = 'auto';
         return undefined;
     }, [hovered, dragged]);
@@ -242,7 +228,7 @@ function Band({ maxSpeed = 50, minSpeed = 0, isMobile = false }) {
 
     return (
         <>
-            <group position={[0, 4, 0]}>
+            <group position={[0, 4.8, 0]}>
                 <RigidBody ref={fixed} {...segmentProps} type="fixed" />
                 <RigidBody position={[0.5, 0, 0]} ref={j1} {...segmentProps}>
                     <BallCollider args={[0.1]} />
@@ -266,24 +252,35 @@ function Band({ maxSpeed = 50, minSpeed = 0, isMobile = false }) {
                         rotation={[0, Math.PI, 0]}
                         onPointerOver={() => hover(true)}
                         onPointerOut={() => hover(false)}
+                        onPointerDown={(e) => {
+                            e.stopPropagation();
+                            pointerDownTime.current = Date.now();
+                            pointerDownPos.current = { x: e.clientX, y: e.clientY };
+                            e.target.setPointerCapture(e.pointerId);
+                            drag(new THREE.Vector3().copy(e.point).sub(vec.copy(card.current.translation())));
+                            window.dispatchEvent(new Event('lanyard-interaction-start'));
+                        }}
                         onPointerUp={(e) => {
+                            e.stopPropagation();
                             e.target.releasePointerCapture(e.pointerId);
+
                             const elapsed = Date.now() - pointerDownTime.current;
                             const dx = e.clientX - pointerDownPos.current.x;
                             const dy = e.clientY - pointerDownPos.current.y;
                             const dist = Math.sqrt(dx * dx + dy * dy);
+
+                            // PERFORMANCE: Resume background shader
+                            window.dispatchEvent(new Event('lanyard-interaction-end'));
+                            drag(false);
+
                             // Quick tap with little movement = flip
                             if (elapsed < 250 && dist < 10 && card.current) {
                                 card.current.wakeUp();
                                 card.current.setAngvel({ x: 0, y: 15, z: 0 });
                             }
-                            drag(false);
                         }}
-                        onPointerDown={(e) => {
-                            pointerDownTime.current = Date.now();
-                            pointerDownPos.current = { x: e.clientX, y: e.clientY };
-                            e.target.setPointerCapture(e.pointerId);
-                            drag(new THREE.Vector3().copy(e.point).sub(vec.copy(card.current.translation())));
+                        onPointerLeave={() => {
+                            window.dispatchEvent(new Event('lanyard-interaction-end'));
                         }}
                     >
                         <mesh geometry={nodes.card.geometry}>

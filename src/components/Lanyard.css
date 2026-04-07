@@ -1,8 +1,10 @@
 .lanyard-wrapper {
     position: absolute;
     right: 2vw;
-    top: 50%;
-    transform: translateY(-50%) translateZ(0);
+    top: 48%;
+    /* Moved up slightly */
+    transform: translateY(-58%) translateZ(0);
+    /* Moved up slightly */
     z-index: 4;
     width: 50%;
     height: 100vh;
@@ -32,6 +34,12 @@
         top: 0;
         transform: translateZ(0);
         height: 100vh;
+        pointer-events: none;
+        /* Let scroll pass through */
+    }
+
+    /* Only the inner canvas/container intercepts pointer events */
+    .lanyard-wrapper>* {
         pointer-events: auto;
     }
 }
